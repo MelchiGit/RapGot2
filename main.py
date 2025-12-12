@@ -178,13 +178,16 @@ def download_lyrics(
     artist_name: str,
     output_dir: Path,
     max_songs: int = 50,
+    timeout: int = 15,
 ) -> list[Path]:
     """Download lyrics for *artist_name* and write them to *output_dir*.
 
     Returns the list of file paths written to disk.
     """
 
-    genius = lyricsgenius.Genius(token)
+    # Increase the default timeout (5s) to avoid frequent ReadTimeout errors when the
+    # Genius API responds slowly and allow the CLI to override it if needed.
+    genius = lyricsgenius.Genius(token, timeout=timeout)
     # Keep console output quiet while still respecting default retry behavior.
     genius.verbose = False
     # Drop bracketed markers such as [Chorus] to keep the text corpus clean.
@@ -263,6 +266,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="Maximum number of songs to download (default: 50)",
     )
     parser.add_argument(
+        "--timeout",
+        type=int,
+        default=15,
+        help="Request timeout in seconds when talking to the Genius API (default: 15)",
+    )
+    parser.add_argument(
         "--token",
         default=os.environ.get("GENIUS_ACCESS_TOKEN"),
         help="Genius API access token (falls back to GENIUS_ACCESS_TOKEN env var)",
@@ -283,6 +292,7 @@ def main(argv: list[str] | None = None) -> int:
             artist_name=args.artist,
             output_dir=args.output_dir,
             max_songs=args.max_songs,
+            timeout=args.timeout,
         )
 
         artist_folder = args.output_dir / sanitize_filename(args.artist)
